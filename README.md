@@ -18,6 +18,8 @@ DashBorges is a powerful financial dashboard tool built with Python that allows 
 
 ## Installation
 
+*Ensure you have [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) and Python installed*
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/dashborges.git
