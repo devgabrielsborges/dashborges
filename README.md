@@ -44,7 +44,7 @@ python main.py
 1. After starting the application, the FastAPI backend will be running at `http://127.0.0.1:8000`
 2. To run the Streamlit dashboard, execute:
    ```bash
-   streamlit run src/dashborges/dashborges.py
+   poetry run streamlit run src/dashborges/dashborges.py
    ```
 
 ### Managing Transactions
