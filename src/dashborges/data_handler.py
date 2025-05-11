@@ -8,6 +8,13 @@ from api_client import DashBorgesClient
 client = DashBorgesClient()
 
 
+def set_api_port(port):
+    """Set the API port for the client."""
+    global client
+    client = DashBorgesClient(base_url=f"http://127.0.0.1:{port}")
+    return client.is_api_available
+
+
 def get_api_status():
     """Check if the API is available."""
     return client.is_api_available
@@ -142,3 +149,31 @@ def get_transactions(
 ):
     """Get transactions with optional filters."""
     return client.get_transactions(start_date, end_date, category, transaction_type)
+
+
+def update_transaction(transaction_id, date, category, description, amount, trans_type):
+    """Update an existing transaction."""
+    success = client.update_transaction(
+        transaction_id, date, category, description, amount, trans_type
+    )
+
+    if success:
+        # Refresh transactions in session state
+        import streamlit as st
+
+        st.session_state["transactions"] = client.get_transactions()
+        return True
+    return False
+
+
+def delete_transaction(transaction_id):
+    """Delete a transaction."""
+    success = client.delete_transaction(transaction_id)
+
+    if success:
+        # Refresh transactions in session state
+        import streamlit as st
+
+        st.session_state["transactions"] = client.get_transactions()
+        return True
+    return False

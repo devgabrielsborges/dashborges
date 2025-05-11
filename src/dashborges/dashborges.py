@@ -2,12 +2,15 @@ import streamlit as st
 from datetime import datetime
 import calendar
 import pandas as pd
+import sys
+import argparse
 
 from data_handler import (
     load_csv_data,
     add_transaction,
     generate_sample_data,
     get_api_status,
+    set_api_port,
 )
 from ui_components import (
     create_sidebar,
@@ -20,6 +23,26 @@ from visualizations import (
     create_balance_trend_chart,
 )
 from utils import calculate_summary, filter_data_by_time
+
+# Parse command-line arguments for API port
+parser = argparse.ArgumentParser()
+parser.add_argument("--api_port", type=int, default=8000, help="API server port")
+
+# Handle the case when Streamlit adds its own arguments
+if len(sys.argv) > 1:
+    # Get only our arguments after the -- separator
+    our_args = []
+    for i, arg in enumerate(sys.argv):
+        if arg == "--" and i + 1 < len(sys.argv):
+            our_args = sys.argv[i + 1 :]
+            break
+
+    if our_args:
+        args, _ = parser.parse_known_args(our_args)
+        # Configure API client with the specified port
+        api_port = args.api_port
+        print(f"Using API port: {api_port}")
+        set_api_port(api_port)
 
 # Set page configuration
 st.set_page_config(
@@ -34,22 +57,39 @@ st.markdown("Track and analyze your personal finances with ease!")
 api_available = get_api_status()
 if not api_available:
     st.warning("""
-        ⚠️ Running in offline mode. API server is not available.  
-        To use the full features, run the API server with: `python main.py`  
+        ⚠️ Running in offline mode. API server is not available.
+        To use the full features, run the API server with: `python main.py`
         Your data will be stored locally and can be synchronized when the API is available.
     """)
 
 # Initialize session state for data storage
 if "transactions" not in st.session_state:
-    st.session_state["transactions"] = pd.DataFrame(
-        {
-            "date": [],
-            "category": [],
-            "description": [],
-            "amount": [],
-            "type": [],  # 'income' or 'expense'
-        }
+    # Import client to load existing transactions
+    from api_client import DashBorgesClient
+
+    # Initialize client and fetch transactions
+    client = DashBorgesClient()
+    st.session_state["transactions"] = client.get_transactions()
+
+    # Add debug info showing that data was loaded
+    st.sidebar.info(
+        f"Loaded {len(st.session_state['transactions'])} transactions on startup"
     )
+
+    # If no transactions were found, initialize with empty DataFrame
+    if (
+        st.session_state["transactions"] is None
+        or st.session_state["transactions"].empty
+    ):
+        st.session_state["transactions"] = pd.DataFrame(
+            {
+                "date": [],
+                "category": [],
+                "description": [],
+                "amount": [],
+                "type": [],  # 'income' or 'expense'
+            }
+        )
 
 # Create sidebar for data input/upload
 create_sidebar()
@@ -106,7 +146,6 @@ else:
     # Sample data for demonstration
     if st.button("Load Sample Data"):
         st.session_state["transactions"] = generate_sample_data()
-        st.experimental_rerun()
 
 # Footer
 st.markdown("---")
