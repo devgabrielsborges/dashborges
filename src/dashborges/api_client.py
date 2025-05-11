@@ -224,6 +224,77 @@ class DashBorgesClient:
 
         return self._save_local_transactions(existing_transactions)
 
+    def update_transaction(
+        self, transaction_id, date_val, category, description, amount, trans_type
+    ):
+        """Update an existing transaction."""
+        if isinstance(date_val, datetime) or isinstance(date_val, date):
+            date_val = date_val.isoformat()
+
+        transaction = {
+            "date": date_val,
+            "category": category,
+            "description": description,
+            "amount": float(amount),
+            "type": trans_type.lower(),
+        }
+
+        # Try API if available
+        if self.is_api_available:
+            try:
+                response = requests.put(
+                    f"{self.base_url}/transactions/{transaction_id}", json=transaction
+                )
+                api_success = response.status_code == 200
+                if api_success:
+                    return True
+                else:
+                    self.is_api_available = False
+                    logger.warning("API request failed. Switching to offline mode.")
+            except requests.exceptions.RequestException:
+                self.is_api_available = False
+                logger.warning("API connection failed. Switching to offline mode.")
+
+        # Fallback to local storage
+        transactions = self._load_local_transactions()
+
+        # Find and update the transaction
+        for i, trans in enumerate(transactions):
+            if trans.get("id") == transaction_id:
+                transactions[i].update(transaction)
+                transactions[i]["id"] = transaction_id
+                return self._save_local_transactions(transactions)
+
+        return False
+
+    def delete_transaction(self, transaction_id):
+        """Delete a transaction."""
+        # Try API if available
+        if self.is_api_available:
+            try:
+                endpoint = f"{self.base_url}/transactions/{transaction_id}"
+                response = requests.delete(endpoint)
+                api_success = response.status_code == 200
+                if api_success:
+                    return True
+                else:
+                    self.is_api_available = False
+                    logger.warning("API request failed. Switching to offline mode.")
+            except requests.exceptions.RequestException:
+                self.is_api_available = False
+                logger.warning("API connection failed. Switching to offline mode.")
+
+        # Fallback to local storage
+        transactions = self._load_local_transactions()
+
+        # Find and remove the transaction
+        for i, trans in enumerate(transactions):
+            if trans.get("id") == transaction_id:
+                transactions.pop(i)
+                return self._save_local_transactions(transactions)
+
+        return False
+
     def get_summary(self, start_date=None, end_date=None):
         """Get financial summary for a time period."""
         # Try API if available

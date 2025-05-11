@@ -8,16 +8,38 @@ import argparse
 def run_api_server():
     """Run the FastAPI backend server."""
     print("Starting API server...")
-    return subprocess.Popen(
+
+    # Start the API server, which will find a free port
+    api_process = subprocess.Popen(
         ["python", "main.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 
+    # Wait a moment for the server to start and write the port file
+    time.sleep(2)
 
-def run_streamlit():
+    # Try to read the port from the .api_port file
+    api_port = 8000  # Default port
+    try:
+        with open(".api_port", "r") as f:
+            api_port = int(f.read().strip())
+        print(f"API server running at: http://127.0.0.1:{api_port}")
+    except (FileNotFoundError, ValueError):
+        print("Warning: Couldn't determine API port, using default port 8000")
+
+    return api_process, api_port
+
+
+def run_streamlit(api_port=8000):
     """Run the Streamlit dashboard."""
     print("Starting Streamlit dashboard...")
     return subprocess.Popen(
-        ["streamlit", "run", "src/dashborges/dashborges.py"],
+        [
+            "streamlit",
+            "run",
+            "src/dashborges/dashborges.py",
+            "--",
+            f"--api_port={api_port}",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -60,6 +82,24 @@ def handle_shutdown(api_process, streamlit_process):
     print("All services stopped.")
 
 
+def kill_process_on_port(port):
+    """Kill any process currently using the specified port."""
+    try:
+        result = subprocess.run(
+            ["lsof", "-i", f":{port}", "-t"], capture_output=True, text=True
+        )
+        if result.stdout:
+            pid = result.stdout.strip()
+            print(f"Found process {pid} using port {port}. Terminating...")
+            subprocess.run(["kill", pid])
+            time.sleep(1)  # Give it time to die
+            return True
+        return False
+    except Exception as e:
+        print(f"Error trying to kill process on port {port}: {e}")
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run DashBorges application")
     parser.add_argument(
@@ -74,23 +114,33 @@ def main():
 
     args = parser.parse_args()
 
+    # Kill any existing process using port 8000
+    kill_process_on_port(8000)
+
     api_process = None
     streamlit_process = None
 
     try:
         # Start API server unless dashboard-only flag is set
         if not args.dashboard_only:
-            api_process = run_api_server()
+            api_process, api_port = run_api_server()
             threading.Thread(
                 target=log_output, args=(api_process, "API"), daemon=True
             ).start()
             # Give API time to start before launching dashboard
             time.sleep(2)
-            print("API server running at: http://127.0.0.1:8000")
 
         # Start Streamlit unless api-only flag is set
         if not args.api_only:
-            streamlit_process = run_streamlit()
+            streamlit_port = 8501
+
+            # If API is running, pass its port to Streamlit
+            if not args.dashboard_only:
+                streamlit_process = run_streamlit(api_port)
+            else:
+                # If API is not running, use default port
+                streamlit_process = run_streamlit()
+
             threading.Thread(
                 target=log_output, args=(streamlit_process, "Streamlit"), daemon=True
             ).start()
@@ -99,7 +149,9 @@ def main():
             if not args.no_browser:
                 threading.Thread(target=open_browser, daemon=True).start()
 
-            print("Streamlit dashboard will be available at: http://localhost:8501")
+            print(
+                f"Streamlit dashboard will be available at: http://localhost:{streamlit_port}"
+            )
 
         # Keep the main thread alive while processes are running
         while True:
