@@ -29,3 +29,26 @@ All notable changes to this project will be documented in this file.
 ### Removed
 
 - None
+
+## [0.2.0] - 2025-05-12
+
+### Highlights for 0.2.0
+
+- Enhanced financial visualizations and data handling capabilities.
+
+### Added in 0.2.0
+
+- **Visualizations**:
+  - `create_income_expense_chart`: Generates income vs. expenses charts for better financial insights.
+  - `create_expense_category_chart`: Visualizes expense breakdown by category.
+  - `create_balance_trend_chart`: Displays balance trends over time.
+- **Utilities**:
+  - `calculate_summary`: Computes total income, expenses, and balance.
+  - `filter_data_by_time`: Filters transaction data by specified time periods.
+- **UI Components**:
+  - `create_sidebar`: Introduces a sidebar for streamlined data management.
+  - `display_financial_summary`: Summarizes key financial metrics.
+  - `display_transaction_table`: Displays a detailed transaction table.
+- **Data Handling**:
+  - `load_csv_data`: Enables CSV data import for transactions.
+  - `add_transaction`, `update_transaction`, `delete_transaction`: CRUD operations for transaction management.
