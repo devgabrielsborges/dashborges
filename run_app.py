@@ -37,6 +37,7 @@ def run_streamlit(api_port=8000):
             "streamlit",
             "run",
             "src/dashborges/dashborges.py",
+            "--server.address=0.0.0.0",
             "--",
             f"--api_port={api_port}",
         ],
@@ -149,9 +150,7 @@ def main():
             if not args.no_browser:
                 threading.Thread(target=open_browser, daemon=True).start()
 
-            print(
-                f"Streamlit dashboard will be available at: http://localhost:{streamlit_port}"
-            )
+            print(f"Streamlit dashboard available at http://localhost:{streamlit_port}")
 
         # Keep the main thread alive while processes are running
         while True:
