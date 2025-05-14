@@ -18,6 +18,8 @@ DashBorges is a powerful financial dashboard tool built with Python that allows 
 
 ## Installation
 
+### Standard Installation
+
 *Ensure you have [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) and Python installed*
 
 ```bash
@@ -36,6 +38,52 @@ poetry shell
 # Start the application
 python main.py
 ```
+
+### Docker Installation
+
+You can also run DashBorges using Docker, which takes care of all dependencies and provides persistent data storage:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/dashborges.git
+
+# Navigate to the project directory
+cd dashborges
+
+# Build and start the container using Docker Compose
+docker-compose up -d
+
+# Access the dashboard at http://localhost:8501
+# Access the API at http://localhost:8000
+```
+
+The application data will persist between container restarts or rebuilds in a Docker volume.
+
+### Docker Management Script
+
+A helper script is provided to manage the Docker operations:
+
+```bash
+# Make the script executable (first time only)
+chmod +x docker-manage.sh
+
+# Start the application
+./docker-manage.sh start
+
+# View logs
+./docker-manage.sh logs
+
+# Stop the application
+./docker-manage.sh stop
+
+# Backup data
+./docker-manage.sh backup
+
+# Restore data from backup
+./docker-manage.sh restore dashborges_backup_20250514_120000.tar
+```
+
+Run `./docker-manage.sh` without arguments to see all available commands.
 
 ## Usage
 
@@ -78,11 +126,17 @@ transactions = client.get_transactions(
 
 ## Configuration
 
-The SQLite database is stored in the `data` directory by default:
+### Database Configuration
+
+The SQLite database location can be configured via the `DASHBORGES_DATA_DIR` environment variable:
 
 ```python
-DATABASE_URL = "sqlite:///home/borges/development/dashborges/data/finances.db"
+# Database location is configurable
+DATA_DIR = os.environ.get("DASHBORGES_DATA_DIR", "/app/data")
+DATABASE_URL = f"sqlite:///{os.path.join(DATA_DIR, 'finances.db')}"
 ```
+
+When using Docker, your data is automatically persisted in a named volume.
 
 ## API Reference
 
