@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  dashborges:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # API port
+      - "8501:8501" # Streamlit dashboard port
+    volumes:
+      - dashborges_data:/app/data
+    environment:
+      - DASHBORGES_DATA_DIR=/app/data
+
+volumes:
+  dashborges_data:
+    # This named volume will persist data between container restarts

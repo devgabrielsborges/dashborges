@@ -3,12 +3,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
+# Get database directory from environment variable or use default
+DATA_DIR = os.environ.get("DASHBORGES_DATA_DIR", "/app/data")
+
 # Create database directory if it doesn't exist
-os.makedirs("/home/borges/development/dashborges/data", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # Create engine
-DATABASE_URL = "sqlite:////home/borges/development/dashborges/data/finances.db"
+DATABASE_URL = f"sqlite:///{os.path.join(DATA_DIR, 'finances.db')}"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+# Log the database location
+print(f"Using database at: {os.path.join(DATA_DIR, 'finances.db')}")
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -18,6 +18,12 @@ RUN poetry config virtualenvs.create false \
 # Copy application source code
 COPY . .
 
+# Create a data directory for persistent storage
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Define a volume for persistent data storage
+VOLUME /app/data
+
 # Expose ports for API and Streamlit dashboard
 EXPOSE 8000 8501
 
