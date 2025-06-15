@@ -15,6 +15,7 @@ DashBorges is a powerful financial dashboard tool built with Python that allows 
 - **Financial Summary**: Get quick insights with financial summary metrics
 - **API Integration**: Full backend API built with FastAPI for data management
 - **Responsive Design**: Optimized for desktop and mobile viewing
+- **Persistent Storage**: All data is safely stored in Docker volumes with automatic backups
 
 ## Installation
 
@@ -39,9 +40,9 @@ poetry shell
 python main.py
 ```
 
-### Docker Installation
+### Docker Installation (Recommended)
 
-You can also run DashBorges using Docker, which takes care of all dependencies and provides persistent data storage:
+You can run DashBorges using Docker, which provides complete data persistence and easy management:
 
 ```bash
 # Clone the repository
@@ -57,11 +58,14 @@ docker-compose up -d
 # Access the API at http://localhost:8000
 ```
 
-The application data will persist between container restarts or rebuilds in a Docker volume.
+**Data Persistence**: All application data (database, configuration, logs) persists between container restarts and updates in dedicated Docker volumes:
+- `dashborges_data`: Stores the SQLite database and user data
+- `dashborges_config`: Stores configuration files
+- `dashborges_logs`: Stores application logs
 
 ### Docker Management Script
 
-A helper script is provided to manage the Docker operations:
+A comprehensive helper script is provided to manage Docker operations and data:
 
 ```bash
 # Make the script executable (first time only)
@@ -76,14 +80,47 @@ chmod +x docker-manage.sh
 # Stop the application
 ./docker-manage.sh stop
 
-# Backup data
+# Create comprehensive backup (includes all data, config, and logs)
 ./docker-manage.sh backup
 
-# Restore data from backup
-./docker-manage.sh restore dashborges_backup_20250514_120000.tar
+# Restore from backup
+./docker-manage.sh restore ./backups/dashborges_full_backup_20250615_120000.tar.gz
+
+# View volume information
+./docker-manage.sh volumes
+
+# Clean up everything (WARNING: Destroys all data)
+./docker-manage.sh clean
 ```
 
 Run `./docker-manage.sh` without arguments to see all available commands.
+
+## Data Management
+
+### Backup and Restore
+
+**Automatic Backups**: The application automatically creates backups of critical data during operations.
+
+**Manual Backups**: Create comprehensive backups using the management script:
+```bash
+./docker-manage.sh backup
+```
+
+**Restore Data**: Restore from any backup file:
+```bash
+./docker-manage.sh restore <backup_file>
+```
+
+### Storage Locations
+
+When running in Docker:
+- **Database**: `/app/data/finances.db`
+- **Local storage**: `/app/data/local_transactions.json`
+- **Backups**: `/app/data/backups/`
+- **Configuration**: `/app/config/`
+- **Logs**: `/app/logs/`
+
+All these directories are mounted as Docker volumes for persistence.
 
 ## Usage
 
@@ -126,17 +163,23 @@ transactions = client.get_transactions(
 
 ## Configuration
 
+### Environment Variables
+
+The application supports the following environment variables for container deployment:
+
+- `DASHBORGES_DATA_DIR`: Directory for data storage (default: `/app/data`)
+- `DASHBORGES_CONFIG_DIR`: Directory for configuration files (default: `/app/config`)
+- `DASHBORGES_LOGS_DIR`: Directory for log files (default: `/app/logs`)
+
 ### Database Configuration
 
-The SQLite database location can be configured via the `DASHBORGES_DATA_DIR` environment variable:
+The SQLite database location is automatically configured based on the data directory:
 
 ```python
-# Database location is configurable
+# Database location is configurable via environment
 DATA_DIR = os.environ.get("DASHBORGES_DATA_DIR", "/app/data")
 DATABASE_URL = f"sqlite:///{os.path.join(DATA_DIR, 'finances.db')}"
 ```
-
-When using Docker, your data is automatically persisted in a named volume.
 
 ## API Reference
 
