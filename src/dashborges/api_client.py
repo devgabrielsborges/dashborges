@@ -6,8 +6,22 @@ import json
 import logging
 from pathlib import Path
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging with file output for container environments
+DATA_DIR = os.environ.get("DASHBORGES_DATA_DIR", "/app/data")
+LOGS_DIR = os.environ.get("DASHBORGES_LOGS_DIR", "/app/logs")
+
+# Ensure logs directory exists
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# Configure logging to file and console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(os.path.join(LOGS_DIR, "api_client.log")),
+        logging.StreamHandler(),
+    ],
+)
 logger = logging.getLogger(__name__)
 
 
@@ -16,9 +30,10 @@ class DashBorgesClient:
         self.base_url = base_url
         self.is_api_available = self._check_api_available()
 
-        # Local storage for offline mode
-        self.data_dir = Path(os.path.expanduser("~")) / ".dashborges"
+        # Local storage for offline mode - use container data directory
+        self.data_dir = Path(DATA_DIR)
         self.data_file = self.data_dir / "local_transactions.json"
+        self.backup_dir = self.data_dir / "backups"
 
         # Create local storage directory if it doesn't exist
         if not self.is_api_available:
@@ -28,37 +43,61 @@ class DashBorgesClient:
         """Check if the API is available."""
         try:
             response = requests.get(f"{self.base_url}/transactions/", timeout=1)
-            return response.status_code == 200
-        except requests.exceptions.RequestException:
-            logger.warning("API server is not available. Running in offline mode.")
+            is_available = response.status_code == 200
+            if is_available:
+                logger.info("API server is available")
+            return is_available
+        except requests.exceptions.RequestException as e:
+            logger.warning(
+                f"API server is not available: {e}. Running in offline mode."
+            )
             return False
 
     def _ensure_local_storage(self):
         """Ensure local storage directory and file exist."""
-        # Create directory if it doesn't exist
+        # Create directories if they don't exist
         os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.backup_dir, exist_ok=True)
 
         # Create empty transactions file if it doesn't exist
         if not self.data_file.exists():
             with open(self.data_file, "w") as f:
                 json.dump([], f)
+            logger.info(f"Created local storage file: {self.data_file}")
 
     def _load_local_transactions(self):
         """Load transactions from local storage."""
         try:
             if self.data_file.exists():
                 with open(self.data_file, "r") as f:
-                    return json.load(f)
+                    transactions = json.load(f)
+                logger.info(
+                    f"Loaded {len(transactions)} transactions from local storage"
+                )
+                return transactions
             return []
         except Exception as e:
             logger.error(f"Error loading local transactions: {e}")
             return []
 
     def _save_local_transactions(self, transactions):
-        """Save transactions to local storage."""
+        """Save transactions to local storage with backup."""
         try:
+            # Create backup before saving new data
+            if self.data_file.exists():
+                backup_file = (
+                    self.backup_dir
+                    / f"transactions_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                )
+                os.makedirs(backup_file.parent, exist_ok=True)
+                with open(self.data_file, "r") as src, open(backup_file, "w") as dst:
+                    dst.write(src.read())
+                logger.info(f"Created backup: {backup_file}")
+
+            # Save new data
             with open(self.data_file, "w") as f:
-                json.dump(transactions, f, default=str)
+                json.dump(transactions, f, default=str, indent=2)
+            logger.info(f"Saved {len(transactions)} transactions to local storage")
             return True
         except Exception as e:
             logger.error(f"Error saving local transactions: {e}")
